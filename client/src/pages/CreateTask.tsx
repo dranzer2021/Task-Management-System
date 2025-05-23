@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { Button, Input, Select, DatePicker, Form, Upload, message } from 'antd';
-import {DocumentPlusIcon} from '@heroicons/react/24/outline'
+import { DocumentPlusIcon } from '@heroicons/react/24/outline';
 
 const { TextArea } = Input;
 
@@ -16,9 +16,7 @@ const CreateTask = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        // Use the api instance which already has the base URL configured
         const response = await api.get('/users/assignable');
-        console.log('Users response:', response);
         setUsers(response.data.map((user: any) => ({
           value: user._id,
           label: `${user.firstName} ${user.lastName}`
@@ -45,22 +43,32 @@ const CreateTask = () => {
       formData.append('assignedTo', values.assignedTo);
 
       // Append files if any
-      if (values.attachments) {
+      if (values.attachments && values.attachments.fileList) {
         values.attachments.fileList.forEach((file: any) => {
-          formData.append('attachments', file.originFileObj);
+          if (file.originFileObj) {
+            formData.append('attachments', file.originFileObj);
+          }
         });
       }
 
-      await api.post('/tasks', formData, {
+      // Log the request data for debugging
+      console.log('Form values:', values);
+      for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+
+      const response = await api.post('/tasks', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
+      console.log('Task creation response:', response.data);
       message.success('Task created successfully');
-      navigate('/dashboard');
-    } catch (error) {
-      message.error('Failed to create task');
+      navigate('/tasks');
+    } catch (error: any) {
+      console.error('Error creating task:', error.response?.data || error);
+      message.error(error.response?.data?.message || 'Failed to create task');
     } finally {
       setLoading(false);
     }
@@ -74,7 +82,7 @@ const CreateTask = () => {
         layout="vertical"
         onFinish={onFinish}
         initialValues={{
-          status: 'pending',
+          status: 'todo',
           priority: 'medium',
         }}
       >
@@ -100,7 +108,7 @@ const CreateTask = () => {
           rules={[{ required: true }]}
         >
           <Select>
-            <Select.Option value="pending">Pending</Select.Option>
+            <Select.Option value="todo">To Do</Select.Option>
             <Select.Option value="in_progress">In Progress</Select.Option>
             <Select.Option value="completed">Completed</Select.Option>
           </Select>
@@ -141,8 +149,12 @@ const CreateTask = () => {
           name="attachments"
           label="Attachments"
         >
-          <Upload multiple beforeUpload={() => false}>
-            <Button icon={<DocumentPlusIcon />}>Select Files</Button>
+          <Upload 
+            multiple 
+            beforeUpload={() => false}
+            accept=".pdf,.doc,.docx,.txt"
+          >
+            <Button icon={<DocumentPlusIcon className="h-5 w-5" />}>Select Files</Button>
           </Upload>
         </Form.Item>
 

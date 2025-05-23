@@ -5,7 +5,8 @@ import { loginStart, loginSuccess, loginFailure } from '../features/auth/authSli
 import { RootState, RegisterCredentials } from '../types';
 
 interface FormErrors {
-  name?: string;
+  firstName?: string;
+  lastName?:string;
   email?: string;
   password?: string;
   confirmPassword?: string;
@@ -13,7 +14,8 @@ interface FormErrors {
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState<RegisterCredentials>({
-    name: '',
+    firstName: '',
+    lastName:'',
     email: '',
     password: '',
     confirmPassword: '',
@@ -41,8 +43,11 @@ const Register: React.FC = () => {
 
   const validateForm = (): FormErrors => {
     const newErrors: FormErrors = {};
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First Name is required';
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last Name is required';
     }
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -54,7 +59,9 @@ const Register: React.FC = () => {
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
-    if (formData.password !== formData.confirmPassword) {
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
     return newErrors;
@@ -75,17 +82,16 @@ const Register: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        // credentials: 'include',
         body: JSON.stringify({
-          firstName: formData.name.split(' ')[0],
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          firstName: formData.firstName,
+          lastName: formData.lastName,
           email: formData.email,
           password: formData.password,
         }),
       });
 
       const data = await response.json();
-      console.log(data);
+      
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
       }
@@ -130,24 +136,46 @@ const Register: React.FC = () => {
           
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Name
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                First Name
               </label>
               <div className="mt-1">
                 <input
-                  id="name"
-                  name="name"
+                  id="firstName"
+                  name="firstName"
                   type="text"
                   required
-                  value={formData.name}
+                  value={formData.firstName}
                   onChange={handleChange}
                   className={`appearance-none block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
+                    errors.firstName ? 'border-red-300' : 'border-gray-300'
                   }`}
                 />
-                {errors.name && (
-                  <p className="mt-2 text-sm text-red-600">{errors.name}</p>
+                {errors.firstName && (
+                  <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
                 )}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <div className="mt-1">
+                <input
+                  id="lastName" 
+                  name="lastName"
+                  type="text"
+                  required
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className={`appearance-none block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${  
+                    errors.lastName ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {errors.lastName && (
+                  <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
+                )}  
               </div>
             </div>
 
@@ -236,4 +264,4 @@ const Register: React.FC = () => {
   );
 };
 
-export default Register; 
+export default Register;

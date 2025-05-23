@@ -22,7 +22,7 @@ export interface Task {
   _id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'todo' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   dueDate?: string;
   assignedTo?: User;
@@ -57,7 +57,8 @@ export interface LoginCredentials {
 }
 
 export interface RegisterCredentials extends LoginCredentials {
-  name: string;
+  firstName: string;
+  lastName: string;
   confirmPassword: string;
 }
 

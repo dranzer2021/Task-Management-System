@@ -5,12 +5,19 @@ import { Menu, Transition } from '@headlessui/react';
 import {
   UserCircleIcon,
   BellIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  Bars3Icon, XMarkIcon
 } from '@heroicons/react/24/outline';
 import { logout } from '../features/auth/authSlice';
 import { RootState } from '../types';
 
-const Navbar: React.FC = () => {
+
+interface NavbarProps {
+  onSidebarToggle: React.Dispatch<React.SetStateAction<boolean>>;
+  isSidebarOpen:boolean;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle, isSidebarOpen }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
 
@@ -22,6 +29,19 @@ const Navbar: React.FC = () => {
     <nav className=" bg-white shadow">
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
+          {/* Hamburger menu button for mobile */}
+          <button
+              type="button"
+              className="lg:hidden z-20 h-12 w-12 flex justify-center items-center align-middle  p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+              onClick={() => onSidebarToggle(prev=>!prev)}
+            >
+              <span className="sr-only">Open sidebar</span>
+              {isSidebarOpen ? (
+                <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+              ) : (
+                <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+              )}
+            </button>
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-xl font-bold text-indigo-600">

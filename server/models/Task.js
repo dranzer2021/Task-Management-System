@@ -90,11 +90,11 @@ taskSchema.path('attachments').validate(function(attachments) {
   return attachments.length <= 3;
 }, 'Tasks cannot have more than 3 attachments');
 
-// Pre-save middleware to validate PDF files
+// Pre-save middleware to validate file types
 taskSchema.pre('save', function(next) {
   if (this.isModified('attachments')) {
     const invalidFiles = this.attachments.filter(
-      attachment => !attachment.mimetype.includes('pdf')
+      attachment => attachment.mimetype !== 'application/pdf'
     );
     
     if (invalidFiles.length > 0) {

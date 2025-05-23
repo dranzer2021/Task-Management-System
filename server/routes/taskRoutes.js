@@ -5,7 +5,9 @@ import {
   getTaskById,
   updateTask,
   deleteTask,
-  downloadAttachment
+  downloadAttachment,
+  uploadAttachment,
+  deleteAttachment
 } from '../controllers/taskController.js';
 import { protect, checkResourceOwnership } from '../middleware/auth.js';
 import upload, { handleFileUploadError } from '../middleware/upload.js';
@@ -25,10 +27,19 @@ router.put('/:id',
   updateTask
 );
 
+// Attachment routes
+router.post('/:id/attachments',
+  checkResourceOwnership(Task),
+  upload.array('attachments', 3),
+  handleFileUploadError,
+  uploadAttachment
+);
+router.get('/:id/attachments/:attachmentId', downloadAttachment);
+router.delete('/:id/attachments/:attachmentId', checkResourceOwnership(Task), deleteAttachment);
+
 // Other routes
 router.get('/', getTasks);
 router.get('/:id', getTaskById);
 router.delete('/:id', checkResourceOwnership(Task), deleteTask);
-router.get('/:id/attachments/:attachmentId', downloadAttachment);
 
 export default router; 

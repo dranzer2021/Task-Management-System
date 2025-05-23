@@ -2,6 +2,7 @@ import { useState, useEffect, ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Document, Page } from 'react-pdf';
+import * as pdfjs from 'pdfjs-dist';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { 
@@ -9,11 +10,16 @@ import {
   UserIcon, 
   CalendarIcon, 
   FlagIcon,
-  XMarkIcon
+  XMarkIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { setCurrentTask } from '../features/tasks/taskSlice';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { RootState, Attachment } from '../types';
+import api from '../utils/api';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PDFDocumentProxy {
   numPages: number;
@@ -23,7 +29,6 @@ const TaskDetails: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
   const { currentTask, isLoading, error } = useSelector((state: RootState) => state.tasks);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -31,37 +36,28 @@ const TaskDetails: React.FC = () => {
   useEffect(() => {
     const fetchTaskDetails = async () => {
       try {
-        if (!taskId || !user?.token) return;
-
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}`, {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch task details');
-        }
-
-        dispatch(setCurrentTask(data));
+        if (!taskId) return;
+        const response = await api.get(`/tasks/${taskId}`);
+        dispatch(setCurrentTask(response.data));
       } catch (err) {
         console.error('Error fetching task details:', err);
       }
     };
 
-    if (taskId && user?.token) {
-      fetchTaskDetails();
-    }
+    fetchTaskDetails();
 
     return () => {
       dispatch(setCurrentTask(null));
+      // Cleanup any blob URLs when component unmounts
+      if (selectedFile) {
+        URL.revokeObjectURL(selectedFile);
+      }
     };
-  }, [taskId, user, dispatch]);
+  }, [taskId, dispatch]);
 
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !currentTask || !user?.token) return;
+    if (!file || !currentTask) return;
 
     if (file.type !== 'application/pdf') {
       alert('Please upload only PDF files');
@@ -74,26 +70,22 @@ const TaskDetails: React.FC = () => {
     }
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('attachments', file);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}/attachments`, {
-        method: 'POST',
+      const response = await api.post(`/tasks/${taskId}/attachments`, formData, {
         headers: {
-          Authorization: `Bearer ${user.token}`,
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData,
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to upload file');
+      // Update the task with the new attachment
+      if (response.data && response.data.attachments) {
+        dispatch(setCurrentTask({
+          ...currentTask,
+          attachments: response.data.attachments
+        }));
       }
-
-      dispatch(setCurrentTask({
-        ...currentTask,
-        attachments: [...(currentTask.attachments || []), data.attachment]
-      }));
     } catch (err) {
       console.error('Error uploading file:', err);
       alert(err instanceof Error ? err.message : 'Failed to upload file');
@@ -101,23 +93,10 @@ const TaskDetails: React.FC = () => {
   };
 
   const handleDeleteAttachment = async (attachmentId: string) => {
-    if (!window.confirm('Are you sure you want to delete this attachment?') || !currentTask || !user?.token) return;
+    if (!window.confirm('Are you sure you want to delete this attachment?') || !currentTask) return;
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/tasks/${taskId}/attachments/${attachmentId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to delete attachment');
-      }
+      await api.delete(`/tasks/${taskId}/attachments/${attachmentId}`);
 
       dispatch(setCurrentTask({
         ...currentTask,
@@ -126,6 +105,25 @@ const TaskDetails: React.FC = () => {
     } catch (err) {
       console.error('Error deleting attachment:', err);
       alert(err instanceof Error ? err.message : 'Failed to delete attachment');
+    }
+  };
+
+  const handleViewAttachment = async (attachment: Attachment) => {
+    try {
+      const response = await api.get(`/tasks/${taskId}/attachments/${attachment._id}`, {
+        responseType: 'blob'
+      });
+      
+      // Clean up previous blob URL if exists
+      if (selectedFile) {
+        URL.revokeObjectURL(selectedFile);
+      }
+      
+      const fileUrl = URL.createObjectURL(response.data);
+      setSelectedFile(fileUrl);
+    } catch (err) {
+      console.error('Error viewing attachment:', err);
+      alert('Failed to load PDF file');
     }
   };
 
@@ -146,6 +144,28 @@ const TaskDetails: React.FC = () => {
       </div>
     );
   }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-100 text-red-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-green-100 text-green-800';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -178,10 +198,25 @@ const TaskDetails: React.FC = () => {
                   Assigned To
                 </dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                  {currentTask.assignedTo?.name || 'Unassigned'}
+                  {currentTask.assignedTo ? 
+                    `${currentTask.assignedTo.firstName} ${currentTask.assignedTo.lastName}` : 
+                    'Unassigned'
+                  }
                 </dd>
               </div>
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <ClockIcon className="h-5 w-5 mr-2" />
+                  Status
+                </dt>
+                <dd className="mt-1 text-sm sm:col-span-2 sm:mt-0">
+                  <span className={`px-2 py-1 text-sm rounded-full ${getStatusColor(currentTask.status)}`}>
+                    {currentTask.status.replace('_', ' ').charAt(0).toUpperCase() + 
+                     currentTask.status.replace('_', ' ').slice(1)}
+                  </span>
+                </dd>
+              </div>
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500 flex items-center">
                   <CalendarIcon className="h-5 w-5 mr-2" />
                   Due Date
@@ -190,39 +225,35 @@ const TaskDetails: React.FC = () => {
                   {currentTask.dueDate ? new Date(currentTask.dueDate).toLocaleDateString() : 'No due date'}
                 </dd>
               </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500 flex items-center">
                   <FlagIcon className="h-5 w-5 mr-2" />
                   Priority
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                  <span className={`px-2 py-1 text-sm rounded-full ${
-                    currentTask.priority === 'high' ? 'bg-red-100 text-red-800' :
-                    currentTask.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {currentTask.priority || 'low'}
+                <dd className="mt-1 text-sm sm:col-span-2 sm:mt-0">
+                  <span className={`px-2 py-1 text-sm rounded-full ${getPriorityColor(currentTask.priority)}`}>
+                    {currentTask.priority.charAt(0).toUpperCase() + currentTask.priority.slice(1)}
                   </span>
                 </dd>
               </div>
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Description</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
                   {currentTask.description || 'No description provided'}
                 </dd>
               </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500 flex items-center">
                   <PaperClipIcon className="h-5 w-5 mr-2" />
                   Attachments
                 </dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
                   <div className="space-y-4">
-                    {currentTask.attachments && currentTask.attachments.length > 0 ? (
-                      currentTask.attachments.map((attachment: Attachment) => (
+                    {currentTask?.attachments && currentTask.attachments.length > 0 ? (
+                      currentTask.attachments.map((attachment) => (
                         <div key={attachment._id} className="flex items-center justify-between">
                           <button
-                            onClick={() => setSelectedFile(attachment.url)}
+                            onClick={() => handleViewAttachment(attachment)}
                             className="text-indigo-600 hover:text-indigo-900"
                           >
                             {attachment.filename}
@@ -269,7 +300,10 @@ const TaskDetails: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-lg font-medium text-gray-900">PDF Preview</h4>
               <button
-                onClick={() => setSelectedFile(null)}
+                onClick={() => {
+                  URL.revokeObjectURL(selectedFile);
+                  setSelectedFile(null);
+                }}
                 className="text-gray-600 hover:text-gray-900"
               >
                 <XMarkIcon className="h-6 w-6" />

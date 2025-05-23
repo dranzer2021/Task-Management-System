@@ -7,28 +7,57 @@ import path from 'path';
 // @access  Private
 export const createTask = async (req, res) => {
   try {
+    // console.log('Request body:', req.body);
+    // console.log('Files:', req.files);
+
     const { title, description, status, priority, dueDate, assignedTo } = req.body;
 
+    // Validate required fields
+    if (!title || !description || !status || !priority || !dueDate || !assignedTo) {
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        received: { title, description, status, priority, dueDate, assignedTo }
+      });
+    }
+
     // Create task
-    const task = await Task.create({
+    const taskData = {
       title,
       description,
       status,
       priority,
-      dueDate,
+      dueDate: new Date(dueDate),
       assignedTo,
       createdBy: req.user._id,
-      attachments: req.files ? req.files.map(file => ({
+      attachments: []
+    };
+
+    // Add attachments if any
+    if (req.files && req.files.length > 0) {
+      taskData.attachments = req.files.map(file => ({
         filename: file.originalname,
         path: file.path,
         mimetype: file.mimetype,
         size: file.size
-      })) : []
-    });
+      }));
+    }
 
-    res.status(201).json(task);
+    // console.log('Creating task with data:', taskData);
+    const task = await Task.create(taskData);
+
+    // Populate assignedTo and createdBy fields
+    const populatedTask = await Task.findById(task._id)
+      .populate('assignedTo', 'firstName lastName email')
+      .populate('createdBy', 'firstName lastName email');
+
+    res.status(201).json(populatedTask);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error creating task:', error);
+    res.status(500).json({ 
+      message: 'Error creating task', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -200,6 +229,74 @@ export const downloadAttachment = async (req, res) => {
     }
 
     res.download(attachment.path, attachment.filename);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Upload task attachment
+// @route   POST /api/tasks/:id/attachments
+// @access  Private
+export const uploadAttachment = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
+    }
+
+    const newAttachments = req.files.map(file => ({
+      filename: file.originalname,
+      path: file.path,
+      mimetype: file.mimetype,
+      size: file.size
+    }));
+
+    task.attachments.push(...newAttachments);
+    await task.save();
+
+    res.status(201).json({ 
+      message: 'Attachments uploaded successfully',
+      attachments: task.attachments 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete task attachment
+// @route   DELETE /api/tasks/:id/attachments/:attachmentId
+// @access  Private
+export const deleteAttachment = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const attachment = task.attachments.id(req.params.attachmentId);
+
+    if (!attachment) {
+      return res.status(404).json({ message: 'Attachment not found' });
+    }
+
+    // Delete the file from the filesystem
+    try {
+      await unlink(attachment.path);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+    }
+
+    // Remove the attachment from the task
+    task.attachments.pull(req.params.attachmentId);
+    await task.save();
+
+    res.json({ message: 'Attachment deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

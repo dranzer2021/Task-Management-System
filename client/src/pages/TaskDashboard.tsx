@@ -232,7 +232,7 @@ const TaskDashboard: React.FC = () => {
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                       >
                         <option value="">All</option>
-                        <option value="pending">Pending</option>
+                        <option value="todo">To Do</option>
                         <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
                       </select>
@@ -387,9 +387,13 @@ const TaskDashboard: React.FC = () => {
                         <span className={`px-2 py-1 text-sm rounded-full ${
                           task.status === 'completed' ? 'bg-green-100 text-green-800' :
                           task.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                          task.status === 'todo' ? 'bg-gray-100 text-gray-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {task.status}
+                          {task.status === 'todo' ? 'To Do' : 
+                           task.status === 'in_progress' ? 'In Progress' : 
+                           task.status === 'completed' ? 'Completed' : 
+                           task.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
