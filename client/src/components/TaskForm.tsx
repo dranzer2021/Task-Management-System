@@ -16,7 +16,7 @@ const TaskForm = ({ task, onClose }: TaskFormProps) => {
   const [formData, setFormData] = useState<TaskFormData>({
     title: '',
     description: '',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '',
     assignedTo: ''
