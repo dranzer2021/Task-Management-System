@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import api from '../utils/api';
-import { RootState } from '@/types';
 import { Button, Input, Select, DatePicker, Form, Upload, message } from 'antd';
-// import { UploadOutlined } from '@ant-design/icons';
 import {DocumentPlusIcon} from '@heroicons/react/24/outline'
-import dayjs from 'dayjs';
 
 const { TextArea } = Input;
 

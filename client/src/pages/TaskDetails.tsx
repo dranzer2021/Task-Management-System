@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { setCurrentTask } from '../features/tasks/taskSlice';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { RootState, Task, Attachment } from '../types';
+import { RootState, Attachment } from '../types';
 
 interface PDFDocumentProxy {
   numPages: number;
