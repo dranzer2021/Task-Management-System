@@ -203,11 +203,16 @@ export const deleteTask = async (req, res) => {
       }
     }
 
-    await task.remove();
+    await Task.findByIdAndDelete(req.params.id);
 
     res.json({ message: 'Task removed' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error deleting task:', error);
+    res.status(500).json({ 
+      message: 'Error deleting task',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
