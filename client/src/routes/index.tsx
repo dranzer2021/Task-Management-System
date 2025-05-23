@@ -8,13 +8,14 @@ import UserDashboard from '../pages/UserDashboard';
 import TaskDashboard from '../pages/TaskDashboard';
 import TaskDetails from '../pages/TaskDetails';
 import CreateTask from '../pages/CreateTask';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { loginSuccess } from '../features/auth/authSlice';
 import { RootState } from '../types';
 
 const AppRoutes: React.FC = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -22,8 +23,17 @@ const AppRoutes: React.FC = () => {
       const user = storedUser ? JSON.parse(storedUser) : null;
       dispatch(loginSuccess({ user: user, token: user?.token }));
     }
+    setLoading(false);
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
