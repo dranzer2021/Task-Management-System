@@ -58,16 +58,17 @@ const Login: React.FC = () => {
 
     try {
       dispatch(loginStart());
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
+        // credentials: 'include',
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
+      console.log(data);
       
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
@@ -80,6 +81,7 @@ const Login: React.FC = () => {
       // Store user data and token
       dispatch(loginSuccess({ user: data, token: data.token }));
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
       navigate('/dashboard');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred during login';

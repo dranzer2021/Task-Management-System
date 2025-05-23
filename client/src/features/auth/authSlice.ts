@@ -35,6 +35,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
     },
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {

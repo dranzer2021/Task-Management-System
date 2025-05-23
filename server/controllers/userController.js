@@ -154,4 +154,19 @@ export const deleteUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+// @desc    Get assignable users (for task assignment)
+// @route   GET /api/users/assignable
+// @access  Private
+export const getAssignableUsers = async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select('firstName lastName email')
+      .sort({ firstName: 1, lastName: 1 });
+
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 }; 

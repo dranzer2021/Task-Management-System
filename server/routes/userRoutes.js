@@ -4,23 +4,24 @@ import {
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  getAssignableUsers
 } from '../controllers/userController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All routes are protected and require admin role
-router.use(protect);
-router.use(authorize('admin'));
+// Routes that only require authentication
+router.get('/assignable', protect, getAssignableUsers);
 
+// Admin routes
 router.route('/')
-  .get(getUsers)
-  .post(createUser);
+  .get(protect, authorize('admin'), getUsers)
+  .post(protect, authorize('admin'), createUser);
 
 router.route('/:id')
-  .get(getUserById)
-  .put(updateUser)
-  .delete(deleteUser);
+  .get(protect, authorize('admin'), getUserById)
+  .put(protect, authorize('admin'), updateUser)
+  .delete(protect, authorize('admin'), deleteUser);
 
 export default router; 

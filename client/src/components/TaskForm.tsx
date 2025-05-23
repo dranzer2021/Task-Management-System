@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addTask, updateTask } from '../features/tasks/taskSlice';
 import { Task, User, TaskFormData, RootState } from '../types';
 import LoadingSpinner from './LoadingSpinner';
+import api from '../utils/api';
 
 interface TaskFormProps {
   task?: Task;
@@ -41,18 +42,14 @@ const TaskForm = ({ task, onClose }: TaskFormProps) => {
     const fetchUsers = async () => {
       setIsLoadingUsers(true);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
-          headers: {
-            Authorization: `Bearer ${user?.token}`,
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch users');
+        const response = await api.get('/users/assignable');
+        if (response.data) {
+          setUsers(response.data.map((user: User) => ({
+            _id: user._id,
+            name: `${user.firstName} ${user.lastName}`,
+            email: user.email
+          })));
         }
-
-        setUsers(data);
       } catch (err) {
         console.error('Error fetching users:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -62,7 +59,7 @@ const TaskForm = ({ task, onClose }: TaskFormProps) => {
     };
 
     fetchUsers();
-  }, [user?.token]);
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -128,7 +125,7 @@ const TaskForm = ({ task, onClose }: TaskFormProps) => {
             required
             value={formData.title}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
 
@@ -142,7 +139,7 @@ const TaskForm = ({ task, onClose }: TaskFormProps) => {
             rows={3}
             value={formData.description}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
 
@@ -156,10 +153,10 @@ const TaskForm = ({ task, onClose }: TaskFormProps) => {
               id="status"
               value={formData.status}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
               <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
+              <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
           </div>

@@ -70,12 +70,12 @@ const Register: React.FC = () => {
 
     try {
       dispatch(loginStart());
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
+        // credentials: 'include',
         body: JSON.stringify({
           firstName: formData.name.split(' ')[0],
           lastName: formData.name.split(' ').slice(1).join(' ') || '',
@@ -85,6 +85,7 @@ const Register: React.FC = () => {
       });
 
       const data = await response.json();
+      console.log(data);
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
       }
@@ -96,6 +97,7 @@ const Register: React.FC = () => {
       // Store user data and token
       dispatch(loginSuccess({ user: data, token: data.token }));
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
       navigate('/dashboard');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred during registration';

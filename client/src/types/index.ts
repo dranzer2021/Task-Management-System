@@ -1,8 +1,10 @@
 export interface User {
   _id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role: 'user' | 'admin';
+  role?: string;
+  name?: string;
   token?: string;
 }
 
@@ -20,7 +22,7 @@ export interface Task {
   _id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'in-progress' | 'completed';
+  status: 'pending' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   dueDate?: string;
   assignedTo?: User;

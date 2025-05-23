@@ -60,11 +60,12 @@ const Dashboard: React.FC = () => {
         });
 
         const data = await response.json();
+        console.log(data);
         if (!response.ok) {
           throw new Error(data.message || 'Failed to fetch tasks');
         }
 
-        dispatch(fetchTasksSuccess(data));
+        dispatch(fetchTasksSuccess(data.tasks));
       } catch (err) {
         dispatch(fetchTasksFailure(err instanceof Error ? err.message : 'An error occurred'));
       }
@@ -232,7 +233,7 @@ const Dashboard: React.FC = () => {
                       >
                         <option value="">All</option>
                         <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
+                        <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
                       </select>
                     </div>
@@ -354,14 +355,14 @@ const Dashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAndSortedTasks.length === 0 ? (
+                {filteredAndSortedTasks?.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                       No tasks found. Create your first task!
                     </td>
                   </tr>
                 ) : (
-                  filteredAndSortedTasks.map((task) => (
+                  filteredAndSortedTasks?.map((task) => (
                     <tr key={task._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
@@ -385,7 +386,7 @@ const Dashboard: React.FC = () => {
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-sm rounded-full ${
                           task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          task.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                          task.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {task.status}

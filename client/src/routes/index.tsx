@@ -1,16 +1,29 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import PrivateRoute from '../components/PrivateRoute';
 import Layout from '../components/Layout';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import TaskDetails from '../pages/TaskDetails';
-import { RootState } from '../types';
+import CreateTask from '../pages/CreateTask';
+import { useEffect } from 'react';
+import { loginSuccess } from '../features/auth/authSlice';
+import { RootState } from '@/types';
 
 const AppRoutes: React.FC = () => {
+  const dispatch = useDispatch()
   const { user } = useSelector((state: RootState) => state.auth);
-
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = storedUser ? JSON.parse(storedUser) : null;
+      dispatch(loginSuccess({ user: user, token: user?.token }));
+    }
+    // console.log(user);
+  }, []);
+  
+  console.log(user);
   return (
     <Routes>
       {/* Public Routes */}
@@ -24,6 +37,14 @@ const AppRoutes: React.FC = () => {
           element={
             <PrivateRoute>
               <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/tasks/create"
+          element={
+            <PrivateRoute>
+              <CreateTask />
             </PrivateRoute>
           }
         />
